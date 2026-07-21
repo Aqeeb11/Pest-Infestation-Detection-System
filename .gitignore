@@ -1,0 +1,40 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+
+# IDE settings
+.vscode/
+.idea/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# YOLO training outputs
+runs/
+results/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Large datasets
+# Keep source code, docs, config, and README tracked
+# These directories are excluded from version control
+# because they can be very large and are typically generated or local data
+# Dataset folders are intentionally ignored
+# to avoid committing training and test data
+# Note: source files under src/, docs/, and config files are still tracked
+# unless explicitly ignored here.
+dataset/raw/
+dataset/classification/
+yolov8n-cls.pt

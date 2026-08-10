@@ -38,3 +38,10 @@ Thumbs.db
 dataset/raw/
 dataset/classification/
 yolov8n-cls.pt
+# Model files
+*.pt
+*.pth
+
+# Dataset contents
+dataset/raw/
+dataset/classification/

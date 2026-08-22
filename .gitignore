@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-
+/node_modules
 # Virtual environment
 venv/
 
@@ -45,3 +45,16 @@ yolov8n-cls.pt
 # Dataset contents
 dataset/raw/
 dataset/classification/
+# Router datasets
+dataset/router/
+
+# Python cache
+data/__pycache__/
+
+# Frontend dependencies and build files
+frontend/node_modules/
+frontend/dist/
+
+# Environment variables
+.env
+.env.*

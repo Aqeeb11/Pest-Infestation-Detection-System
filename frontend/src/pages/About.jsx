@@ -1,0 +1,5 @@
+function About() {
+  return <section className="page"><div className="page-title"><span className="eyebrow">The project</span><h1>Built to help vineyards see earlier.</h1><p>GrapeGuard AI supports early detection of grape diseases and pest infestation using machine learning and image classification.</p></div><div className="grid-3"><div className="card"><h3>Classification pipeline</h3><p>YOLOv8 models support disease classification, pest classification and a router model that directs incoming leaf images.</p></div><div className="card"><h3>Guidance that follows</h3><p>An existing treatment and management database provides the practical information shown alongside predictions.</p></div><div className="card"><h3>Explainable AI</h3><p>Grad-CAM provides supporting visual explanation for model predictions while keeping interpretation appropriately cautious.</p></div></div><div className="dashboard-panel card"><span className="eyebrow">Technology</span><h2>One connected system</h2><p>GrapeGuard AI combines a React frontend, FastAPI backend, YOLOv8 inference, treatment and management data, and explainable AI using Grad-CAM.</p></div></section>
+}
+
+export default About

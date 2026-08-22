@@ -1,0 +1,87 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+
+:root { font-family: 'DM Sans', sans-serif; color: #103b28; background: #f7fbf5; font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { width: 100%; min-height: 100%; }
+body { min-width: 320px; background: #f7fbf5; }
+a { color: inherit; }
+button, input { font: inherit; }
+
+.navbar { width: 100%; height: 78px; position: relative; z-index: 20; background: rgba(255, 255, 255, .9); border-bottom: 1px solid #d7e5d1; }
+.navbar-inner { max-width: 1240px; height: 100%; margin: 0 auto; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; gap: 40px; }
+.brand { display: flex; align-items: center; gap: 10px; color: #103b28; text-decoration: none; white-space: nowrap; }
+.brand-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.brand-name { font: 700 21px 'Playfair Display', Georgia, serif; }
+.nav-links { display: flex; align-items: center; gap: 29px; margin-left: auto; }
+.nav-link { position: relative; padding: 29px 0 26px; color: #53615c; font-size: 14px; font-weight: 600; text-decoration: none; transition: color .2s ease; }
+.nav-link:hover, .nav-link.active { color: #23824b; }
+.nav-link.active::after { content: ''; position: absolute; right: 0; bottom: 19px; left: 0; height: 2px; background: #23824b; }
+
+.landing-page { min-height: calc(100vh - 78px); background: radial-gradient(circle at 70% 35%, rgba(224, 242, 215, .65), transparent 32%), #f7fbf5; }
+body:has(.landing-page) .site-footer { display: none; }
+.hero-section { width: min(1240px, 100%); min-height: calc(100vh - 78px); margin: 0 auto; padding: 45px 28px 48px; display: grid; grid-template-columns: minmax(0, 48%) minmax(0, 52%); align-items: center; gap: 36px; }
+.hero-content { min-width: 0; padding-left: 4px; }
+.hero-badge { display: inline-flex; align-items: center; gap: 9px; padding: 8px 15px; border: 1px solid #d0e4ca; border-radius: 999px; background: #eaf5e4; color: #23824b; font-size: 11px; font-weight: 700; letter-spacing: 1.4px; }
+.badge-icon { font-size: 16px; }
+.hero-title { margin-top: 26px; color: #103b28; font: 700 clamp(48px, 5vw, 75px)/1.02 'Playfair Display', Georgia, serif; letter-spacing: -1.8px; }
+.hero-title span { color: #23824b; }
+.hero-description { max-width: 570px; margin-top: 24px; color: #53615c; font-size: 16px; line-height: 1.7; }
+.hero-buttons { display: flex; gap: 13px; margin-top: 28px; flex-wrap: wrap; }
+.primary-button, .secondary-button { min-height: 50px; padding: 0 21px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; border-radius: 8px; font-size: 14px; font-weight: 700; text-decoration: none; transition: transform .2s ease, box-shadow .2s ease, background .2s ease; }
+.primary-button { color: #fff; background: #23824b; box-shadow: 0 10px 22px rgba(35, 130, 75, .18); }
+.primary-button:hover { transform: translateY(-2px); background: #1d7041; box-shadow: 0 13px 25px rgba(35, 130, 75, .23); }
+.button-arrow { font-size: 20px; line-height: 1; }
+.secondary-button { color: #1d7041; border: 1px solid #54a66e; background: #fff; }
+.secondary-button:hover { transform: translateY(-2px); background: #eaf5e4; }
+.dashboard-icon { font-size: 13px; letter-spacing: -2px; }
+.hero-features { display: flex; align-items: center; gap: 21px; margin-top: 34px; }
+.hero-feature { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.feature-icon { width: 36px; height: 36px; display: flex; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: 10px; background: #e1f1d5; font-size: 17px; }
+.hero-feature div:last-child { display: flex; flex-direction: column; gap: 2px; }
+.hero-feature strong, .hero-feature span { white-space: nowrap; }
+.hero-feature strong { color: #163d2b; font-size: 12px; }
+.hero-feature span { color: #53615c; font-size: 12px; }
+.feature-divider { width: 1px; height: 37px; flex: 0 0 auto; background: #d5e3d1; }
+
+.hero-visual { min-width: 0; height: min(650px, calc(100vh - 150px)); display: flex; align-items: center; justify-content: center; }
+.hero-image-wrapper { width: 100%; height: 100%; overflow: hidden; border-radius: 30px; box-shadow: 0 18px 46px rgba(30, 86, 47, .16); }
+.hero-image { width: 100%; height: 100%; display: block; object-fit: cover; border-radius: 30px; }
+
+@media (max-width: 980px) {
+  .navbar-inner { padding: 0 22px; gap: 25px; }
+  .nav-links { gap: 20px; }
+  .hero-section { grid-template-columns: minmax(0, 1fr) minmax(0, .95fr); gap: 24px; padding: 34px 22px 40px; }
+  .hero-title { font-size: clamp(44px, 5.8vw, 62px); }
+  .hero-description { font-size: 15px; }
+  .hero-features { gap: 13px; }
+  .hero-visual { height: min(580px, calc(100vh - 145px)); }
+}
+
+@media (max-width: 760px) {
+  .navbar { height: auto; }
+  .navbar-inner { padding: 15px 20px 12px; flex-wrap: wrap; gap: 12px; }
+  .brand-name { font-size: 20px; }
+  .nav-links { order: 3; width: 100%; justify-content: space-between; gap: 14px; overflow-x: auto; }
+  .nav-link { padding: 4px 0 8px; font-size: 13px; }
+  .nav-link.active::after { bottom: 0; }
+  .landing-page { min-height: 0; }
+  .hero-section { min-height: 0; grid-template-columns: 1fr; padding: 42px 20px 58px; gap: 38px; }
+  .hero-content { padding-left: 0; }
+  .hero-title { margin-top: 22px; font-size: clamp(46px, 12vw, 64px); letter-spacing: -1px; }
+  .hero-description { max-width: 620px; font-size: 16px; }
+  .hero-buttons { flex-direction: column; }
+  .primary-button, .secondary-button { width: 100%; }
+  .hero-features { align-items: stretch; justify-content: space-between; gap: 10px; margin-top: 30px; }
+  .hero-feature { gap: 8px; }
+  .feature-divider { height: auto; min-height: 36px; }
+  .hero-visual { height: min(520px, 100vw); }
+  .hero-image-wrapper, .hero-image { border-radius: 24px; }
+}
+
+@media (max-width: 480px) {
+  .hero-badge { font-size: 10px; letter-spacing: 1px; }
+  .hero-features { flex-wrap: wrap; justify-content: flex-start; }
+  .feature-divider { display: none; }
+  .hero-feature { flex: 1 1 42%; }
+  .hero-visual { height: 390px; }
+}

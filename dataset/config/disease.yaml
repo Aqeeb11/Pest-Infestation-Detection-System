@@ -1,0 +1,11 @@
+train: dataset/raw/disease/Grapevine Leaf Variety & Disease Dataset (GLVD)/Grapevine Leaf Variety & Disease Dataset (GLVD)/Diseases/train
+val: dataset/raw/disease/Grapevine Leaf Variety & Disease Dataset (GLVD)/Grapevine Leaf Variety & Disease Dataset (GLVD)/Diseases/val
+test: dataset/raw/disease/Grapevine Leaf Variety & Disease Dataset (GLVD)/Grapevine Leaf Variety & Disease Dataset (GLVD)/Diseases/test
+names:
+  - Bacterial Rot
+  - Black Measles
+  - Black Rot
+  - Downy Mildew
+  - Healthy Leaves
+  - Leaf Blight
+  - Powdery Mildew

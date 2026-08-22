@@ -1,0 +1,21 @@
+train: dataset/raw/pest/train
+val: dataset/raw/pest/val
+test: dataset/raw/pest/test
+names:
+  - Viteus_vitifoliae
+  - Colomerus_vitis
+  - Brevipalpus_lewisi
+  - Oides_decempunctata
+  - Polyphagotarsonemus_latus
+  - Pseudococcus_comstocki
+  - Parathrene_regalis
+  - Ampelophaga
+  - Lycorma_delicatula
+  - Xylotrechus
+  - Cicadella_viridis
+  - Miridae
+  - Trialeurodes_vaporariorum
+  - Erythroneura_apicalis
+  - Papilio_xuthus
+  - Panonchus_citri
+  - Phyllocoptes_oleiverus

@@ -1,152 +1,400 @@
-from __future__ import annotations
-
-import json
 from pathlib import Path
-from typing import Any
 
+import torch
 import numpy as np
-import yaml
+import matplotlib.pyplot as plt
 from ultralytics import YOLO
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[1]
+def main():
+    # Project root
+    root = Path(__file__).resolve().parents[1]
 
-
-def _find_test_image_count(test_dir: Path) -> int:
-    if not test_dir.exists():
-        raise FileNotFoundError(f"Test directory not found: {test_dir}")
-    return sum(1 for path in test_dir.rglob("*") if path.is_file() and path.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"})
-
-
-def _coerce_metric(metrics: Any, *candidate_names: str) -> Any:
-    for name in candidate_names:
-        if hasattr(metrics, name):
-            return getattr(metrics, name)
-
-    results_dict = getattr(metrics, "results_dict", None)
-    if isinstance(results_dict, dict):
-        for name in candidate_names:
-            if name in results_dict:
-                return results_dict[name]
-            alt = name.replace("top1", "top1_acc").replace("top5", "top5_acc")
-            if alt in results_dict:
-                return results_dict[alt]
-
-    return None
-
-
-def _save_confusion_matrix(metrics: Any, output_dir: Path, class_names: list[str]) -> None:
-    confusion_matrix = None
-    cm_obj = getattr(metrics, "confusion_matrix", None)
-    if cm_obj is not None:
-        for attr in ("matrix", "confusion_matrix", "cm"):
-            if hasattr(cm_obj, attr):
-                value = getattr(cm_obj, attr)
-                if value is not None:
-                    confusion_matrix = value
-                    break
-        if confusion_matrix is None and hasattr(cm_obj, "to_array"):
-            confusion_matrix = cm_obj.to_array()
-
-    if confusion_matrix is None:
-        print("Confusion matrix is not available in this Ultralytics version.")
-        return
-
-    matrix = np.asarray(confusion_matrix)
-    if matrix.ndim != 2:
-        print("Confusion matrix could not be interpreted as a 2D array.")
-        return
-
-    cm_path = output_dir / "confusion_matrix.csv"
-    np.savetxt(cm_path, matrix, fmt="%d", delimiter=",")
-
-    labels_path = output_dir / "class_names.json"
-    with labels_path.open("w", encoding="utf-8") as handle:
-        json.dump(class_names, handle, indent=2)
-
-    print(f"Confusion matrix saved to: {cm_path}")
-    print(f"Class labels saved to: {labels_path}")
-
-
-def main() -> None:
-    root = _repo_root()
-
-    model_path = root / "runs/classify/disease_yolov8n/weights/best.pt"
-    dataset_dir = root / "dataset/raw/disease/Grapevine Leaf Variety & Disease Dataset (GLVD)/Grapevine Leaf Variety & Disease Dataset (GLVD)/Diseases"
-    data_config = root / "dataset/config/disease.yaml"
-    test_dir = dataset_dir / "test"
-    output_dir = root / "runs/classify/disease_yolov8n/test_results"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    if not model_path.exists():
-        raise FileNotFoundError(f"Trained model not found: {model_path}")
-    if not dataset_dir.exists():
-        raise FileNotFoundError(f"Dataset directory not found: {dataset_dir}")
-    if not data_config.exists():
-        raise FileNotFoundError(f"Dataset config not found: {data_config}")
-    if not test_dir.exists():
-        raise FileNotFoundError(f"Test directory not found: {test_dir}")
-
-    print(f"Loading model: {model_path}")
-    model = YOLO(str(model_path))
-
-    print(f"Evaluating only the test split from: {test_dir}")
-    print(f"Using GPU device 0")
-
-    metrics = model.val(
-        data=str(dataset_dir),
-        split="test",
-        device=0,
-        project=str(output_dir.parent),
-        name=output_dir.name,
-        exist_ok=True,
-        imgsz=224,
-        batch=16,
+    # Trained disease classification model
+    model_path = (
+        root
+        / "runs"
+        / "classify"
+        / "disease_yolov8n"
+        / "weights"
+        / "best.pt"
     )
 
-    top1 = _coerce_metric(metrics, "top1", "top1_acc")
-    top5 = _coerce_metric(metrics, "top5", "top5_acc")
+    # Disease dataset
+    dataset_root = (
+        root
+        / "dataset"
+        / "raw"
+        / "disease"
+        / "Grapevine Leaf Variety & Disease Dataset (GLVD)"
+        / "Grapevine Leaf Variety & Disease Dataset (GLVD)"
+        / "Diseases"
+    )
 
-    if top1 is None:
-        top1 = getattr(metrics, "top1", None)
-    if top5 is None:
-        top5 = getattr(metrics, "top5", None)
+    test_path = dataset_root / "test"
 
-    if top1 is not None:
-        top1_value = float(top1) * 100.0
-        print(f"Test Top-1 accuracy: {top1_value:.2f}%")
+    # Check required paths
+    if not model_path.exists():
+        raise FileNotFoundError(
+            f"Trained disease model not found:\n{model_path}"
+        )
+
+    if not dataset_root.exists():
+        raise FileNotFoundError(
+            f"Disease dataset not found:\n{dataset_root}"
+        )
+
+    if not test_path.exists():
+        raise FileNotFoundError(
+            f"Disease test dataset not found:\n{test_path}"
+        )
+
+    # Use GPU if available
+    device = 0 if torch.cuda.is_available() else "cpu"
+
+    print(f"Loading model: {model_path}")
+    print(f"Evaluating disease test dataset from: {test_path}")
+
+    if device == 0:
+        print("Using GPU device 0")
     else:
-        print("Test Top-1 accuracy: unavailable")
+        print("Using CPU")
 
-    if top5 is not None:
-        top5_value = float(top5) * 100.0
-        print(f"Test Top-5 accuracy: {top5_value:.2f}%")
+    # Load trained model
+    model = YOLO(str(model_path))
+
+    # ---------------------------------------------------------
+    # 1. Standard YOLO validation
+    # ---------------------------------------------------------
+    metrics = model.val(
+        data=str(dataset_root),
+        split="test",
+        device=device,
+    )
+
+    top1 = float(metrics.top1)
+    top5 = float(metrics.top5)
+
+    # ---------------------------------------------------------
+    # 2. Get class names from trained model
+    # ---------------------------------------------------------
+    names = model.names
+
+    if isinstance(names, dict):
+        class_names = [names[i] for i in range(len(names))]
     else:
-        print("Test Top-5 accuracy: unavailable")
+        class_names = list(names)
 
-    test_image_count = _find_test_image_count(test_dir)
-    print(f"Number of test images: {test_image_count}")
+    num_classes = len(class_names)
 
-    with data_config.open("r", encoding="utf-8") as handle:
-        dataset_config = yaml.safe_load(handle)
-    class_names = dataset_config.get("names", [])
+    print("\nClasses:")
+    for i, name in enumerate(class_names):
+        print(f"{i}: {name}")
 
-    _save_confusion_matrix(metrics, output_dir, class_names)
-
-    summary_path = output_dir / "evaluation_summary.json"
-    summary = {
-        "top1_accuracy": float(top1) if top1 is not None else None,
-        "top5_accuracy": float(top5) if top5 is not None else None,
-        "num_test_images": test_image_count,
-        "model_path": str(model_path),
-        "test_dir": str(test_dir),
+    # ---------------------------------------------------------
+    # 3. Find all test images
+    # ---------------------------------------------------------
+    image_extensions = {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".bmp",
+        ".webp",
+        ".tif",
+        ".tiff",
     }
-    with summary_path.open("w", encoding="utf-8") as handle:
-        json.dump(summary, handle, indent=2)
 
-    print(f"Evaluation results saved in: {output_dir}")
-    print(f"Summary saved to: {summary_path}")
+    test_images = [
+        file
+        for file in test_path.rglob("*")
+        if file.is_file()
+        and file.suffix.lower() in image_extensions
+    ]
+
+    print(f"\nNumber of test images: {len(test_images)}")
+    print("Generating predictions...")
+
+    # ---------------------------------------------------------
+    # 4. Generate predictions
+    # ---------------------------------------------------------
+    y_true = []
+    y_pred = []
+
+    for image_path in test_images:
+
+        relative_path = image_path.relative_to(test_path)
+
+        # Expected:
+        # test/
+        #   Class_Name/
+        #       image.jpg
+
+        if len(relative_path.parts) < 2:
+            print(f"Skipping image: {image_path}")
+            continue
+
+        true_class_name = relative_path.parts[0]
+
+        if true_class_name not in class_names:
+            print(
+                f"Warning: '{true_class_name}' "
+                f"is not present in model classes. Skipping."
+            )
+            continue
+
+        true_index = class_names.index(true_class_name)
+
+        # Predict image
+        results = model.predict(
+            source=str(image_path),
+            device=device,
+            verbose=False,
+        )
+
+        if not results:
+            continue
+
+        result = results[0]
+
+        if result.probs is None:
+            continue
+
+        predicted_index = int(result.probs.top1)
+
+        y_true.append(true_index)
+        y_pred.append(predicted_index)
+
+    # ---------------------------------------------------------
+    # 5. Create confusion matrix
+    # ---------------------------------------------------------
+    confusion = np.zeros(
+        (num_classes, num_classes),
+        dtype=int,
+    )
+
+    for true_index, predicted_index in zip(y_true, y_pred):
+        confusion[true_index, predicted_index] += 1
+
+    # ---------------------------------------------------------
+    # 6. Create output directory
+    # ---------------------------------------------------------
+    results_dir = (
+        root
+        / "runs"
+        / "classify"
+        / "disease_yolov8n"
+        / "test_results"
+    )
+
+    results_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    # ---------------------------------------------------------
+    # 7. Save CSV
+    # ---------------------------------------------------------
+    csv_file = results_dir / "confusion_matrix.csv"
+
+    with open(csv_file, "w", encoding="utf-8") as file:
+        file.write("," + ",".join(class_names) + "\n")
+
+        for i, class_name in enumerate(class_names):
+            row = ",".join(str(value) for value in confusion[i])
+            file.write(f"{class_name},{row}\n")
+
+    # ---------------------------------------------------------
+    # 8. Normalized confusion matrix
+    # ---------------------------------------------------------
+    row_sums = confusion.sum(axis=1, keepdims=True)
+
+    normalized = np.divide(
+        confusion,
+        row_sums,
+        out=np.zeros_like(
+            confusion,
+            dtype=float,
+        ),
+        where=row_sums != 0,
+    )
+
+    # ---------------------------------------------------------
+    # 9. Plot actual-count confusion matrix
+    # ---------------------------------------------------------
+    plt.figure(figsize=(12, 10))
+
+    plt.imshow(
+        confusion,
+        interpolation="nearest",
+        cmap="Blues",
+    )
+
+    plt.title("Disease Model Confusion Matrix")
+    plt.colorbar()
+
+    tick_marks = np.arange(num_classes)
+
+    plt.xticks(
+        tick_marks,
+        class_names,
+        rotation=90,
+    )
+
+    plt.yticks(
+        tick_marks,
+        class_names,
+    )
+
+    threshold = confusion.max() / 2.0
+
+    for i in range(num_classes):
+        for j in range(num_classes):
+            plt.text(
+                j,
+                i,
+                str(confusion[i, j]),
+                horizontalalignment="center",
+                color=(
+                    "white"
+                    if confusion[i, j] > threshold
+                    else "black"
+                ),
+            )
+
+    plt.ylabel("True")
+    plt.xlabel("Predicted")
+    plt.tight_layout()
+
+    confusion_png = results_dir / "confusion_matrix.png"
+
+    plt.savefig(
+        confusion_png,
+        dpi=300,
+        bbox_inches="tight",
+    )
+
+    plt.close()
+
+    # ---------------------------------------------------------
+    # 10. Plot normalized confusion matrix
+    # ---------------------------------------------------------
+    plt.figure(figsize=(12, 10))
+
+    plt.imshow(
+        normalized,
+        interpolation="nearest",
+        cmap="Blues",
+        vmin=0,
+        vmax=1,
+    )
+
+    plt.title("Disease Model Confusion Matrix Normalized")
+    plt.colorbar()
+
+    plt.xticks(
+        tick_marks,
+        class_names,
+        rotation=90,
+    )
+
+    plt.yticks(
+        tick_marks,
+        class_names,
+    )
+
+    for i in range(num_classes):
+        for j in range(num_classes):
+            plt.text(
+                j,
+                i,
+                f"{normalized[i, j]:.2f}",
+                horizontalalignment="center",
+                color=(
+                    "white"
+                    if normalized[i, j] > 0.5
+                    else "black"
+                ),
+            )
+
+    plt.ylabel("True")
+    plt.xlabel("Predicted")
+    plt.tight_layout()
+
+    normalized_png = (
+        results_dir
+        / "confusion_matrix_normalized.png"
+    )
+
+    plt.savefig(
+        normalized_png,
+        dpi=300,
+        bbox_inches="tight",
+    )
+
+    plt.close()
+
+    # ---------------------------------------------------------
+    # 11. Save evaluation summary
+    # ---------------------------------------------------------
+    summary_file = results_dir / "evaluation_summary.txt"
+
+    with open(
+        summary_file,
+        "w",
+        encoding="utf-8",
+    ) as file:
+
+        file.write("DISEASE MODEL EVALUATION\n")
+        file.write("========================\n")
+        file.write(
+            f"Test Top-1 accuracy: {top1 * 100:.2f}%\n"
+        )
+        file.write(
+            f"Test Top-5 accuracy: {top5 * 100:.2f}%\n"
+        )
+        file.write(
+            f"Number of test images: {len(test_images)}\n"
+        )
+        file.write(
+            f"Images used in confusion matrix: {len(y_true)}\n"
+        )
+
+    # ---------------------------------------------------------
+    # 12. Print results
+    # ---------------------------------------------------------
+    print("\n" + "=" * 60)
+    print("             DISEASE MODEL EVALUATION")
+    print("=" * 60)
+
+    print(
+        f"Test Top-1 accuracy: {top1 * 100:.2f}%"
+    )
+
+    print(
+        f"Test Top-5 accuracy: {top5 * 100:.2f}%"
+    )
+
+    print(
+        f"Number of test images: {len(test_images)}"
+    )
+
+    print(
+        f"Images used in confusion matrix: {len(y_true)}"
+    )
+
+    print("\nConfusion matrix saved to:")
+    print(confusion_png)
+
+    print("\nNormalized confusion matrix saved to:")
+    print(normalized_png)
+
+    print("\nCSV saved to:")
+    print(csv_file)
+
+    print("\nEvaluation summary saved to:")
+    print(summary_file)
+
+    print("=" * 60)
 
 
 if __name__ == "__main__":

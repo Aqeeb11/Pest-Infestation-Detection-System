@@ -683,9 +683,9 @@ Detection History
 
 # 👨‍💻 Project Information
 
-**Project Name:** Early Pest Infestation Detection System
+**Project Name:** Early Pest Infestation Detection System using ML
 
-**Project Title:** Early Pest Infestation Detection System
+**Project Title:** Early Pest Infestation Detection System using ML
 
 **Domain:** Machine Learning / Artificial Intelligence / Agriculture
 

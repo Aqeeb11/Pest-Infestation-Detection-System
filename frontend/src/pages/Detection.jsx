@@ -1,12 +1,194 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 
 function Detection() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [inputMode, setInputMode] = useState("upload");
+  const [cameraPanelOpen, setCameraPanelOpen] = useState(false);
+  const [cameraReview, setCameraReview] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [cameraStarting, setCameraStarting] = useState(false);
+  const [cameraError, setCameraError] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const cameraRequestId = useRef(0);
+
+  const stopCamera = (closePanel = false) => {
+    cameraRequestId.current += 1;
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setCameraStream(null);
+    setCameraStarting(false);
+
+    if (closePanel) {
+      setCameraPanelOpen(false);
+    }
+  };
+
+  const getCameraErrorMessage = (cameraError) => {
+    if (cameraError?.name === "NotAllowedError" || cameraError?.name === "SecurityError") {
+      return "Camera permission was denied. Allow camera access in your browser settings and try again.";
+    }
+
+    if (cameraError?.name === "NotFoundError" || cameraError?.name === "DevicesNotFoundError") {
+      return "No camera was found on this device.";
+    }
+
+    if (cameraError?.name === "NotReadableError" || cameraError?.name === "TrackStartError") {
+      return "The camera is unavailable or already in use by another app.";
+    }
+
+    if (cameraError?.name === "AbortError") {
+      return "The camera could not start. It may already be in use by another app.";
+    }
+
+    if (cameraError?.name === "OverconstrainedError") {
+      return "The requested camera is unavailable. Try another camera or upload an image instead.";
+    }
+
+    return "Unable to access the camera. Check that a camera is connected and available, or upload an image instead.";
+  };
+
+  const startCamera = async () => {
+    setCameraPanelOpen(true);
+    setCameraReview(false);
+    setCameraError("");
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError("This browser does not support camera access. Upload an image instead.");
+      return;
+    }
+
+    const requestId = ++cameraRequestId.current;
+    setCameraStarting(true);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: { ideal: "environment" } },
+      });
+
+      if (requestId !== cameraRequestId.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      streamRef.current = stream;
+      setCameraStream(stream);
+    } catch (cameraFailure) {
+      if (requestId === cameraRequestId.current) {
+        setCameraError(getCameraErrorMessage(cameraFailure));
+      }
+    } finally {
+      if (requestId === cameraRequestId.current) {
+        setCameraStarting(false);
+      }
+    }
+  };
+
+  const handleUseCamera = () => {
+    stopCamera(true);
+
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
+
+    setSelectedFile(null);
+    setPreview(null);
+    setResult(null);
+    setError("");
+    setInputMode("camera");
+    startCamera();
+  };
+
+  const handleUseUpload = () => {
+    stopCamera(true);
+    setCameraReview(false);
+    setCameraError("");
+    setInputMode("upload");
+  };
+
+  const handleCapturePhoto = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas || !video.videoWidth || !video.videoHeight) {
+      setCameraError("The camera is not ready yet. Wait for the preview, then try again.");
+      return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      setCameraError("Unable to capture this photo. Please try again or upload an image.");
+      return;
+    }
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const requestId = cameraRequestId.current;
+    canvas.toBlob((blob) => {
+      if (requestId !== cameraRequestId.current) {
+        return;
+      }
+
+      if (!blob) {
+        setCameraError("Unable to capture this photo. Please try again or upload an image.");
+        stopCamera();
+        return;
+      }
+
+      const photoFile = new File([blob], `grape-leaf-${Date.now()}.jpg`, {
+        type: "image/jpeg",
+      });
+
+      if (preview) {
+        URL.revokeObjectURL(preview);
+      }
+
+      setSelectedFile(photoFile);
+      setPreview(URL.createObjectURL(photoFile));
+      setResult(null);
+      setError("");
+      setCameraError("");
+      setCameraReview(true);
+      stopCamera();
+    }, "image/jpeg", 0.92);
+  };
+
+  const handleRetakePhoto = () => {
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
+
+    setSelectedFile(null);
+    setPreview(null);
+    setResult(null);
+    setCameraReview(false);
+    startCamera();
+  };
+
+  const handleUsePhoto = () => {
+    stopCamera(true);
+    setCameraReview(false);
+    setCameraError("");
+    setInputMode("upload");
+  };
 
   // =========================================================
   // CONVERT IMAGE TO PERSISTENT DATA URL
@@ -291,12 +473,17 @@ function Detection() {
   // =========================================================
 
   const handleRemove = () => {
+    stopCamera(true);
+
     if (preview) {
       URL.revokeObjectURL(preview);
     }
 
     setSelectedFile(null);
     setPreview(null);
+    setInputMode("upload");
+    setCameraReview(false);
+    setCameraError("");
     setResult(null);
     setError("");
     setLoading(false);
@@ -305,6 +492,36 @@ function Detection() {
   // =========================================================
   // CLEAN PREVIEW URL
   // =========================================================
+
+  useEffect(() => {
+    if (!cameraStream || !cameraPanelOpen || cameraReview) {
+      return;
+    }
+
+    const video = videoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    video.srcObject = cameraStream;
+    video.play().catch(() => {
+      setCameraError("The camera preview could not start. Try again or upload an image instead.");
+    });
+
+    return () => {
+      video.srcObject = null;
+    };
+  }, [cameraStream, cameraPanelOpen, cameraReview]);
+
+  useEffect(() => () => {
+    cameraRequestId.current += 1;
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -376,9 +593,62 @@ function Detection() {
             </div>
 
 
+            <div className="input-mode-switch" role="group" aria-label="Choose image input method">
+              <button
+                type="button"
+                className={inputMode === "upload" ? "input-mode-button active" : "input-mode-button"}
+                aria-pressed={inputMode === "upload"}
+                onClick={handleUseUpload}
+              >
+                Upload Image
+              </button>
+              <button
+                type="button"
+                className={inputMode === "camera" ? "input-mode-button active" : "input-mode-button"}
+                aria-pressed={inputMode === "camera"}
+                onClick={handleUseCamera}
+              >
+                Use Camera
+              </button>
+            </div>
+
+
             {/* UPLOAD */}
 
-            {!preview ? (
+            {inputMode === "camera" && cameraPanelOpen && !cameraReview ? (
+              <div className="camera-capture">
+                <div className="camera-frame">
+                  {cameraStream ? (
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      muted
+                      playsInline
+                      aria-label="Live camera preview"
+                    />
+                  ) : (
+                    <div className="camera-status" role="status">
+                      {cameraStarting ? "Starting camera..." : "Camera preview is unavailable."}
+                    </div>
+                  )}
+                </div>
+                <canvas ref={canvasRef} className="camera-canvas" aria-hidden="true" />
+                {cameraError && (
+                  <div className="detection-error" role="alert" aria-live="assertive">
+                    {cameraError}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  className="capture-button"
+                  onClick={handleCapturePhoto}
+                  disabled={!cameraStream || cameraStarting}
+                  aria-label="Capture photo from camera"
+                >
+                  Capture Photo
+                </button>
+              </div>
+            ) : !preview ? (
 
               <label className="upload-zone">
 
@@ -445,6 +715,27 @@ function Detection() {
                   </button>
 
                 </div>
+
+                {cameraReview && (
+                  <div className="camera-review-actions">
+                    <button
+                      type="button"
+                      className="camera-secondary-button"
+                      onClick={handleRetakePhoto}
+                      aria-label="Retake photo"
+                    >
+                      Retake
+                    </button>
+                    <button
+                      type="button"
+                      className="camera-confirm-button"
+                      onClick={handleUsePhoto}
+                      aria-label="Use captured photo"
+                    >
+                      Use Photo
+                    </button>
+                  </div>
+                )}
 
               </div>
 
